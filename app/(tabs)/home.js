@@ -1,10 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import {
   FlatList,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 
 const summaryCards = [
@@ -68,6 +69,7 @@ const transactions = [
 ];
 
 export default function Home() {
+  const router = useRouter();
   return (
     <View style={styles.screen}>
       <View style={styles.header}>
@@ -76,9 +78,15 @@ export default function Home() {
           <Text style={styles.name}>Prabjot Singh</Text>
         </View>
 
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>AR</Text>
-        </View>
+        <TouchableOpacity
+          onPress={() => router.push("/profile")}
+          activeOpacity={0.5}
+        >
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>PS</Text>
+          </View>
+
+        </TouchableOpacity>
       </View>
 
       <View style={styles.summaryRow}>
@@ -111,17 +119,23 @@ export default function Home() {
 
       <View style={styles.transactionsHeader}>
         <Text style={styles.sectionTitle}>Recent transactions</Text>
-        <Text style={styles.link}>See all</Text>
+
+        <TouchableOpacity onPress={() => console.log("See all pressed")}>
+          <Text style={styles.link}>See all</Text>
+        </TouchableOpacity>
       </View>
 
-      <FlatList
-        data={transactions}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <TransactionRow transaction={item} />}
-        contentContainerStyle={styles.transactionList}
-      />
+      <View style={styles.listContainer}>
+        <FlatList
+          data={transactions}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => <TransactionRow transaction={item} />}
+          contentContainerStyle={styles.transactionList}
+          showsVerticalScrollIndicator={false}
+        />
+      </View>
 
-      <TouchableOpacity style={styles.addButton}>
+      <TouchableOpacity style={styles.addButton} activeOpacity={0.3}>
         <Ionicons name="add" color="#FFFFFF" size={28} />
       </TouchableOpacity>
     </View>
@@ -328,10 +342,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#6C63FF",
     borderRadius: 28,
-    bottom: 84,
-    height: 40,
+    bottom: 20,
+    right: 175,
+    height: 50,
     justifyContent: "center",
     position: "absolute",
-    width: 56,
+    width: 70,
+  },
+  listContainer: {
+    height: 320,
   },
 });

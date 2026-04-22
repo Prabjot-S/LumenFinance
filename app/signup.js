@@ -117,7 +117,7 @@ export default function Signup() {
     if (error) Alert.alert("Error", error.message);
     else {
       Alert.alert("Success", "Account created! You can now sign in.");
-      router.replace("/maindash");
+      router.replace("/(tabs)/home");
     }
   }
 
@@ -142,8 +142,8 @@ export default function Signup() {
 
       {/* Title */}
       <Animated.View style={[s.titleBlock, { opacity: titleOp, transform: [{ translateY: titleY }] }]}>
-        <Text style={s.appName}>Lumen</Text>
-        <Text style={s.appSub}>Personal Finance</Text>
+        <Text style={s.appName}>LUMEN</Text>
+        <Text style={s.appSub}>Your Finances, Illuminated</Text>
       </Animated.View>
 
       {/* Form panel — left/right/bottom anchored so it fills the screen width exactly */}
@@ -261,13 +261,12 @@ const s = StyleSheet.create({
     fontWeight: "800",
     color: "#dcd6ff",
     letterSpacing: 4,
-    fontFamily: Platform.OS === "ios" ? "Georgia" : "serif",
+    fontFamily: "Arial",
   },
   appSub: {
-    fontSize: 11,
+    fontSize: 10,
     color: "#7b74b8",
     letterSpacing: 3.5,
-    textTransform: "uppercase",
     marginTop: 5,
   },
   panel: {
@@ -326,7 +325,7 @@ const s = StyleSheet.create({
     marginBottom: 18,
     shadowColor: "#6C63FF",
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.5,
+    shadowOpacity: 0.4,
     shadowRadius: 16,
     elevation: 10,
   },

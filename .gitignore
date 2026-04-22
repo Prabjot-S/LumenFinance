@@ -44,3 +44,10 @@ app-example
 
 #env
 .env
+
+# VS Code
+.vscode/
+
+# Logs
+*.log
+logs/

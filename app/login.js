@@ -22,34 +22,55 @@ function Star({ x, y, size, delay }) {
   useEffect(() => {
     const loop = () =>
       Animated.sequence([
-        Animated.timing(opacity, { toValue: 0.9, duration: 1000 + Math.random() * 800, delay, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-        Animated.timing(opacity, { toValue: 0.15, duration: 1000 + Math.random() * 800, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(opacity, {
+          toValue: 0.9,
+          duration: 1000 + Math.random() * 800,
+          delay,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacity, {
+          toValue: 0.15,
+          duration: 1000 + Math.random() * 800,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
       ]).start(loop);
     loop();
   }, []);
   return (
-    <Animated.View style={{ position: "absolute", left: x, top: y, width: size, height: size, borderRadius: size / 2, backgroundColor: "#fff", opacity }} />
+    <Animated.View
+      style={{
+        left: x,
+        top: y,
+        width: size,
+        height: size,
+        borderRadius: size / 2,
+        backgroundColor: "#fff",
+        opacity,
+      }}
+    />
   );
 }
 
 // Stars spread as percentages of screen width so they always fill edge-to-edge
 function buildStars(w) {
   return [
-    { x: w * 0.01,  y: 55,  size: 2.6, delay: 0   },
-    { x: w * 0.16,  y: 30,  size: 1.8, delay: 300 },
-    { x: w * 0.29,  y: 65,  size: 2,   delay: 600 },
-    { x: w * 0.41,  y: 22,  size: 1.6, delay: 150 },
-    { x: w * 0.50,  y: 40,  size: 2.2, delay: 900 },
-    { x: w * 0.61,  y: 18,  size: 1.6, delay: 450 },
-    { x: w * 0.73,  y: 55,  size: 2,   delay: 750 },
-    { x: w * 0.83,  y: 32,  size: 1.8, delay: 200 },
-    { x: w * 0.93,  y: 65,  size: 2.6, delay: 550 },
-    { x: w * 0.11,  y: 90,  size: 1.4, delay: 800 },
-    { x: w * 0.77,  y: 88,  size: 1.4, delay: 100 },
-    { x: w * 0.23,  y: 110, size: 1.2, delay: 650 },
-    { x: w * 0.65,  y: 105, size: 1.2, delay: 350 },
-    { x: w * 0.35,  y: 140, size: 1.0, delay: 500 },
-    { x: w * 0.88,  y: 125, size: 1.0, delay: 720 },
+    { x: w * 0.01, y: 55, size: 2.6, delay: 0 },
+    { x: w * 0.16, y: 30, size: 1.8, delay: 300 },
+    { x: w * 0.29, y: 65, size: 2, delay: 600 },
+    { x: w * 0.41, y: 22, size: 1.6, delay: 150 },
+    { x: w * 0.5, y: 40, size: 2.2, delay: 900 },
+    { x: w * 0.61, y: 18, size: 1.6, delay: 450 },
+    { x: w * 0.73, y: 55, size: 2, delay: 750 },
+    { x: w * 0.83, y: 32, size: 1.8, delay: 200 },
+    { x: w * 0.93, y: 65, size: 2.6, delay: 550 },
+    { x: w * 0.11, y: 90, size: 1.4, delay: 800 },
+    { x: w * 0.77, y: 88, size: 1.4, delay: 100 },
+    { x: w * 0.23, y: 110, size: 1.2, delay: 650 },
+    { x: w * 0.65, y: 105, size: 1.2, delay: 350 },
+    { x: w * 0.35, y: 140, size: 1.0, delay: 500 },
+    { x: w * 0.88, y: 125, size: 1.0, delay: 720 },
   ];
 }
 
@@ -69,40 +90,77 @@ export default function Login() {
   const { width } = useWindowDimensions();
   const stars = buildStars(width);
 
-  const [email, setEmail]       = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading]   = useState(false);
-  const [focused, setFocused]   = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [focused, setFocused] = useState(null);
   const router = useRouter();
 
-  const moonY   = useRef(new Animated.Value(-100)).current;
-  const moonOp  = useRef(new Animated.Value(0)).current;
+  const moonY = useRef(new Animated.Value(-100)).current;
+  const moonOp = useRef(new Animated.Value(0)).current;
   const moonFlt = useRef(new Animated.Value(0)).current;
-  const titleY  = useRef(new Animated.Value(24)).current;
+  const titleY = useRef(new Animated.Value(24)).current;
   const titleOp = useRef(new Animated.Value(0)).current;
-  const formY   = useRef(new Animated.Value(50)).current;
-  const formOp  = useRef(new Animated.Value(0)).current;
+  const formY = useRef(new Animated.Value(50)).current;
+  const formOp = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.stagger(160, [
       Animated.parallel([
-        Animated.timing(moonY,  { toValue: 0, duration: 900, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-        Animated.timing(moonOp, { toValue: 1, duration: 800, useNativeDriver: true }),
+        Animated.timing(moonY, {
+          toValue: 0,
+          duration: 900,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(moonOp, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: true,
+        }),
       ]),
       Animated.parallel([
-        Animated.timing(titleY,  { toValue: 0, duration: 700, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-        Animated.timing(titleOp, { toValue: 1, duration: 700, useNativeDriver: true }),
+        Animated.timing(titleY, {
+          toValue: 0,
+          duration: 700,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(titleOp, {
+          toValue: 1,
+          duration: 700,
+          useNativeDriver: true,
+        }),
       ]),
       Animated.parallel([
-        Animated.timing(formY,  { toValue: 0, duration: 700, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-        Animated.timing(formOp, { toValue: 1, duration: 700, useNativeDriver: true }),
+        Animated.timing(formY, {
+          toValue: 0,
+          duration: 700,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(formOp, {
+          toValue: 1,
+          duration: 700,
+          useNativeDriver: true,
+        }),
       ]),
     ]).start();
 
     const float = () =>
       Animated.sequence([
-        Animated.timing(moonFlt, { toValue: -10, duration: 3200, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-        Animated.timing(moonFlt, { toValue: 0,   duration: 3200, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(moonFlt, {
+          toValue: -10,
+          duration: 3200,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+        Animated.timing(moonFlt, {
+          toValue: 0,
+          duration: 3200,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
       ]).start(float);
     const t = setTimeout(float, 1000);
     return () => clearTimeout(t);
@@ -110,10 +168,13 @@ export default function Login() {
 
   async function handleLogin() {
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
     setLoading(false);
     if (error) Alert.alert("Error", error.message);
-    else router.replace("/maindash");
+    else router.replace("/(tabs)/home");
   }
 
   return (
@@ -125,25 +186,44 @@ export default function Login() {
       <View style={[s.skyBg, { width }]} />
 
       {/* Stars — always edge-to-edge */}
-      {stars.map((st, i) => <Star key={i} {...st} />)}
+      {stars.map((st, i) => (
+        <Star key={i} {...st} />
+      ))}
 
       {/* Ambient purple halo */}
       <View style={s.halo} />
 
       {/* Moon */}
-      <Animated.View style={[s.moonWrap, { opacity: moonOp, transform: [{ translateY: moonY }, { translateY: moonFlt }] }]}>
+      <Animated.View
+        style={[
+          s.moonWrap,
+          {
+            opacity: moonOp,
+            transform: [{ translateY: moonY }, { translateY: moonFlt }],
+          },
+        ]}
+      >
         <CrescentMoon />
       </Animated.View>
 
       {/* Title */}
-      <Animated.View style={[s.titleBlock, { opacity: titleOp, transform: [{ translateY: titleY }] }]}>
-        <Text style={s.appName}>Lumen</Text>
-        <Text style={s.appSub}>Personal Finance</Text>
+      <Animated.View
+        style={[
+          s.titleBlock,
+          { opacity: titleOp, transform: [{ translateY: titleY }] },
+        ]}
+      >
+        <Text style={s.appName}>LUMEN</Text>
+        <Text style={s.appSub}>Your Finances, Illuminated</Text>
       </Animated.View>
 
       {/* Form panel */}
-      <Animated.View style={[s.panel, { opacity: formOp, transform: [{ translateY: formY }] }]}>
-
+      <Animated.View
+        style={[
+          s.panel,
+          { opacity: formOp, transform: [{ translateY: formY }] },
+        ]}
+      >
         <Text style={s.heading}>Welcome back</Text>
         <Text style={s.subheading}>Sign in to continue</Text>
 
@@ -185,11 +265,13 @@ export default function Login() {
           <Text style={s.btnText}>{loading ? "Signing in…" : "Sign In"}</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => router.push("/signup")} style={s.linkRow}>
+        <TouchableOpacity
+          onPress={() => router.push("/signup")}
+          style={s.linkRow}
+        >
           <Text style={s.linkGray}>Don't have an account? </Text>
           <Text style={s.linkPurple}>Sign Up</Text>
         </TouchableOpacity>
-
       </Animated.View>
     </KeyboardAvoidingView>
   );
@@ -239,13 +321,12 @@ const s = StyleSheet.create({
     fontWeight: "800",
     color: "#dcd6ff",
     letterSpacing: 4,
-    fontFamily: Platform.OS === "ios" ? "Georgia" : "serif",
+    fontFamily: "Arial",
   },
   appSub: {
-    fontSize: 11,
+    fontSize: 10,
     color: "#7b74b8",
     letterSpacing: 3.5,
-    textTransform: "uppercase",
     marginTop: 5,
   },
   panel: {
@@ -258,7 +339,12 @@ const s = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 20,
   },
-  heading: { fontSize: 22, fontWeight: "700", color: "#dcd6ff", marginBottom: 3 },
+  heading: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#dcd6ff",
+    marginBottom: 3,
+  },
   subheading: { fontSize: 13, color: "#5c567a", marginBottom: 24 },
   inputBox: {
     backgroundColor: "#0e0c22",
@@ -280,10 +366,16 @@ const s = StyleSheet.create({
     shadowRadius: 10,
     elevation: 8,
   },
-  fieldLabel: { fontSize: 9, fontWeight: "700", color: "#6C63FF", letterSpacing: 1.5, marginBottom: 5 },
+  fieldLabel: {
+    fontSize: 9,
+    fontWeight: "700",
+    color: "#6C63FF",
+    letterSpacing: 1.5,
+    marginBottom: 5,
+  },
   input: { color: "#dcd6ff", fontSize: 16, padding: 0, width: "100%" },
   btn: {
-    backgroundColor: "#6C63FF",
+    backgroundColor: "#544cbf",
     borderRadius: 14,
     paddingVertical: 16,
     alignItems: "center",
@@ -292,13 +384,22 @@ const s = StyleSheet.create({
     marginBottom: 18,
     shadowColor: "#6C63FF",
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.5,
+    shadowOpacity: 0.4,
     shadowRadius: 16,
     elevation: 10,
   },
   btnDisabled: { backgroundColor: "#3d3880", shadowOpacity: 0.2 },
-  btnText: { color: "#fff", fontSize: 16, fontWeight: "700", letterSpacing: 0.6 },
-  linkRow: { flexDirection: "row", justifyContent: "center", alignSelf: "stretch" },
+  btnText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "700",
+    letterSpacing: 0.6,
+  },
+  linkRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignSelf: "stretch",
+  },
   linkGray: { color: "#5c567a", fontSize: 14 },
   linkPurple: { color: "#9d97e8", fontSize: 14, fontWeight: "600" },
 });
