@@ -1,18 +1,18 @@
-import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "expo-router";
 import {
   Alert,
   Animated,
   Easing,
   Image,
   KeyboardAvoidingView,
-  Platform,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
-  useWindowDimensions,
+  useWindowDimensions
 } from "react-native";
 import { supabase } from "../lib/supabase";
 
@@ -63,15 +63,23 @@ function CrescentMoon() {
 
 // ── Signup screen ─────────────────────────────────────────────────────────────
 export default function Signup() {
+  const router = useRouter();
   const { width } = useWindowDimensions();
   const stars = buildStars(width);
 
   const [email, setEmail]                     = useState("");
   const [password, setPassword]               = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [fullName, setFullName]               = useState("");
+  const [phone, setPhone]                     = useState("");
   const [loading, setLoading]                 = useState(false);
   const [focused, setFocused]                 = useState(null);
-  const router = useRouter();
+  const [errors, setErrors]                   = useState({});
+  const clearError = (field) => {
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: null }));
+    }
+  };
 
   const moonY   = useRef(new Animated.Value(-100)).current;
   const moonOp  = useRef(new Animated.Value(0)).current;
@@ -107,24 +115,38 @@ export default function Signup() {
   }, []);
 
   async function handleSignup() {
-    if (password !== confirmPassword) {
-      Alert.alert("Error", "Passwords do not match");
+    const newErrors = {};
+    if (!fullName.trim()) newErrors.fullName = "Full name is required";
+    if (!phone.trim()) newErrors.phone = "Phone is required";
+    if (!email.trim()) newErrors.email = "Email is required";
+    if (password !== confirmPassword) newErrors.confirmPassword = "Passwords do not match";
+    if (!password.trim()) newErrors.password = "Password is required";
+    if (!confirmPassword.trim()) newErrors.confirmPassword = "Confirm password is required";
+
+    setErrors(newErrors);
+    if (Object.keys(newErrors).length > 0) return;
+
+    setLoading(true);
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    if (error) {
+      setLoading(false);
+      Alert.alert("Error", error.message);
       return;
     }
-    setLoading(true);
-    const { error } = await supabase.auth.signUp({ email, password });
-    setLoading(false);
-    if (error) Alert.alert("Error", error.message);
-    else {
-      Alert.alert("Success", "Account created! You can now sign in.");
-      router.replace("/(tabs)/home");
-    }
+    
+    // Navigate to verification page with signup data
+    const signupData = { fullName, phone, email, userId: data.user.id };
+    router.push({
+      pathname: '/verify-email',
+      params: { data: JSON.stringify(signupData) }
+    });
   }
 
   return (
     <KeyboardAvoidingView
       style={s.root}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      behavior="padding"
+      keyboardVerticalOffset={10}
     >
       {/* Full-width sky background */}
       <View style={[s.skyBg, { width }]} />
@@ -148,72 +170,107 @@ export default function Signup() {
 
       {/* Form panel — left/right/bottom anchored so it fills the screen width exactly */}
       <Animated.View style={[s.panel, { opacity: formOp, transform: [{ translateY: formY }] }]}>
+        <ScrollView contentContainerStyle={s.scrollContent} keyboardShouldPersistTaps="handled">
+          <Text style={s.heading}>Create Account</Text>
+          <Text style={s.subheading}>Join Lumen today</Text>
 
-        <Text style={s.heading}>Create Account</Text>
-        <Text style={s.subheading}>Join Lumen today</Text>
+          {/* Full Name */}
+          <View style={[s.inputBox, focused === "name" && s.inputBoxFocused]}>
+            <Text style={s.fieldLabel}>FULL NAME</Text>
+            <TextInput
+              style={s.input}
+              placeholder="John Doe"
+              placeholderTextColor="#4a4570"
+              value={fullName}
+              onChangeText={(text) => { setFullName(text); clearError('fullName'); }}
+              autoCapitalize="words"
+              onFocus={() => setFocused("name")}
+              onBlur={() => setFocused(null)}
+            />
+          </View>
+          {errors.fullName && <Text style={s.errorText}>{errors.fullName}</Text>}
 
-        {/* Email */}
-        <View style={[s.inputBox, focused === "email" && s.inputBoxFocused]}>
-          <Text style={s.fieldLabel}>EMAIL</Text>
-          <TextInput
-            style={s.input}
-            placeholder="you@example.com"
-            placeholderTextColor="#4a4570"
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            keyboardType="email-address"
-            onFocus={() => setFocused("email")}
-            onBlur={() => setFocused(null)}
-          />
-        </View>
+          {/* Phone */}
+          <View style={[s.inputBox, focused === "phone" && s.inputBoxFocused]}>
+            <Text style={s.fieldLabel}>PHONE</Text>
+            <TextInput
+              style={s.input}
+              placeholder="(123) 456-7890"
+              placeholderTextColor="#4a4570"
+              value={phone}
+              onChangeText={(text) => { setPhone(text); clearError('phone'); }}
+              keyboardType="phone-pad"
+              onFocus={() => setFocused("phone")}
+              onBlur={() => setFocused(null)}
+            />
+          </View>
+          {errors.phone && <Text style={s.errorText}>{errors.phone}</Text>}
 
-        {/* Password */}
-        <View style={[s.inputBox, focused === "pw" && s.inputBoxFocused]}>
-          <Text style={s.fieldLabel}>PASSWORD</Text>
-          <TextInput
-            style={s.input}
-            placeholder="••••••••"
-            placeholderTextColor="#4a4570"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            onFocus={() => setFocused("pw")}
-            onBlur={() => setFocused(null)}
-          />
-        </View>
+          {/* Email */}
+          <View style={[s.inputBox, focused === "email" && s.inputBoxFocused]}>
+            <Text style={s.fieldLabel}>EMAIL</Text>
+            <TextInput
+              style={s.input}
+              placeholder="you@example.com"
+              placeholderTextColor="#4a4570"
+              value={email}
+              onChangeText={(text) => { setEmail(text); clearError('email'); }}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              onFocus={() => setFocused("email")}
+              onBlur={() => setFocused(null)}
+            />
+          </View>
+          {errors.email && <Text style={s.errorText}>{errors.email}</Text>}
 
-        {/* Confirm password */}
-        <View style={[s.inputBox, focused === "cpw" && s.inputBoxFocused]}>
-          <Text style={s.fieldLabel}>CONFIRM PASSWORD</Text>
-          <TextInput
-            style={s.input}
-            placeholder="••••••••"
-            placeholderTextColor="#4a4570"
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            secureTextEntry
-            onFocus={() => setFocused("cpw")}
-            onBlur={() => setFocused(null)}
-          />
-        </View>
+          {/* Password */}
+          <View style={[s.inputBox, focused === "pw" && s.inputBoxFocused]}>
+            <Text style={s.fieldLabel}>PASSWORD</Text>
+            <TextInput
+              style={s.input}
+              placeholder="••••••••"
+              placeholderTextColor="#4a4570"
+              value={password}
+              onChangeText={(text) => { setPassword(text); clearError('password'); }}
+              secureTextEntry
+              onFocus={() => setFocused("pw")}
+              onBlur={() => setFocused(null)}
+            />
+          </View>
+          {errors.password && <Text style={s.errorText}>{errors.password}</Text>}
 
-        {/* Button */}
-        <TouchableOpacity
-          style={[s.btn, loading && s.btnDisabled]}
-          onPress={handleSignup}
-          disabled={loading}
-          activeOpacity={0.82}
-        >
-          <Text style={s.btnText}>{loading ? "Creating account…" : "Sign Up"}</Text>
-        </TouchableOpacity>
+          {/* Confirm password */}
+          <View style={[s.inputBox, focused === "cpw" && s.inputBoxFocused]}>
+            <Text style={s.fieldLabel}>CONFIRM PASSWORD</Text>
+            <TextInput
+              style={s.input}
+              placeholder="••••••••"
+              placeholderTextColor="#4a4570"
+              value={confirmPassword}
+              onChangeText={(text) => { setConfirmPassword(text); clearError('confirmPassword'); }}
+              secureTextEntry
+              onFocus={() => setFocused("cpw")}
+              onBlur={() => setFocused(null)}
+            />
+          </View>
+          {errors.confirmPassword && <Text style={s.errorText}>{errors.confirmPassword}</Text>}
 
-        {/* Link */}
-        <TouchableOpacity onPress={() => router.push("/login")} style={s.linkRow}>
-          <Text style={s.linkGray}>Already have an account? </Text>
-          <Text style={s.linkPurple}>Sign In</Text>
-        </TouchableOpacity>
+          {/* Button */}
+          <TouchableOpacity
+            style={[s.btn, loading && s.btnDisabled]}
+            onPress={handleSignup}
+            disabled={loading}
+            activeOpacity={0.82}
+          >
+            <Text style={s.btnText}>{loading ? "Creating account…" : "Sign Up"}</Text>
+          </TouchableOpacity>
 
+          {/* Link */}
+          <TouchableOpacity onPress={() => router.replace("/login")} style={s.linkRow}>
+            <Text style={s.linkGray}>Already have an account? </Text>
+            <Text style={s.linkPurple}>Sign In</Text>
+          </TouchableOpacity>
+        </ScrollView>
       </Animated.View>
     </KeyboardAvoidingView>
   );
@@ -279,6 +336,9 @@ const s = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 20,
   },
+  scrollContent: {
+    paddingBottom: 300,
+  },
   heading: { fontSize: 22, fontWeight: "700", color: "#dcd6ff", marginBottom: 3 },
   subheading: { fontSize: 13, color: "#5c567a", marginBottom: 24 },
   inputBox: {
@@ -338,4 +398,10 @@ const s = StyleSheet.create({
   },
   linkGray: { color: "#5c567a", fontSize: 14 },
   linkPurple: { color: "#9d97e8", fontSize: 14, fontWeight: "600" },
+  errorText: {
+    color: "#ff6b6b",
+    fontSize: 12,
+    marginBottom: 8,
+    marginLeft: 4,
+  },
 });

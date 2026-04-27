@@ -173,14 +173,16 @@ export default function Login() {
       password,
     });
     setLoading(false);
-    if (error) Alert.alert("Error", error.message);
-    else router.replace("/(tabs)/home");
+    if (error) {
+      Alert.alert("Error", error.message);
+    }
+
   }
 
   return (
     <KeyboardAvoidingView
       style={s.root}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       {/* Full-width dark sky gradient via nested Views */}
       <View style={[s.skyBg, { width }]} />

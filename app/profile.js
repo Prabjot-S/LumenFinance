@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated,
   Easing,
@@ -11,15 +11,68 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
+import { supabase } from "../lib/supabase";
 
 export default function Profile() {
   const router = useRouter();
   const { width, height } = useWindowDimensions();
   const stars = useMemo(() => buildStars(width, height), [width, height]);
 
-  function handleLogout() {
-    // TODO: hook up supabase.auth.signOut() here
-    console.log("Logout pressed");
+  //name, initials
+  const [fullName, setFullName] = useState("");
+  const [initials, setInitials] = useState("");
+
+  //grabbing email
+  const [email, setEmail] = useState("");
+
+  useEffect(() => {
+    async function fetchUserName() {
+      // for name,initials - Step 1: ask Supabase who is currently logged in
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (userError || !user) {
+        console.log("Could not get logged-in user");
+        return;
+      }
+
+      setEmail(user.email || "");
+
+      // Step 2: use that auth user id to look up this user's row in UserInfo
+      const { data, error } = await supabase
+        .from("UserInfo")
+        .select("full_name")
+        .eq("user_id", user.id)
+        .single();
+
+      if (error) {
+        console.log("Could not fetch full name:", error.message);
+        return;
+      }
+
+      // Step 3: save the full name into React state
+      setFullName(data.full_name);
+
+      // Step 4: turn the full name into initials
+      const nameParts = data.full_name.trim().split(" ");
+
+      // take the first letter of the first 2 name parts
+      const userInitials = nameParts
+        .slice(0, 2)
+        .map((part) => part[0]?.toUpperCase())
+        .join("");
+
+      setInitials(userInitials);
+    }
+
+    fetchUserName();
+  }, []);
+
+  async function handleLogout() {
+    await supabase.auth.signOut();
+    router.replace("/login");
   }
 
   return (
@@ -49,11 +102,11 @@ export default function Profile() {
         <View style={styles.hero}>
           <View style={styles.avatarRing}>
             <View style={styles.avatar}>
-              <Text style={styles.avatarText}>PS</Text>
+              <Text style={styles.avatarText}>{initials || "?"}</Text>
             </View>
           </View>
-          <Text style={styles.heroName}>Prabjot Singh</Text>
-          <Text style={styles.heroEmail}>prabjot@email.com</Text>
+          <Text style={styles.heroName}>{fullName || "Loading..."}</Text>
+          <Text style={styles.heroEmail}>{email || "Loading..."}</Text>
           <View style={styles.activeBadge}>
             <View style={styles.badgeDot} />
             <Text style={styles.badgeText}>Active account</Text>
@@ -155,7 +208,8 @@ export default function Profile() {
         {/* -- Logout -- */}
         <TouchableOpacity
           style={styles.logoutBtn}
-          onPress={() => router.replace("/login")}
+          onPressIn={() => console.log("logout")}
+          onPress={handleLogout}
           activeOpacity={0.3}
         >
           <Text style={styles.logoutText}>Log out</Text>
@@ -168,7 +222,17 @@ export default function Profile() {
 }
 
 // ── Reusable menu row component ──
-function MenuRow({ icon, iconBg, iconColor, title, subtitle, badge, badgeColor, onPress, isLast }) {
+function MenuRow({
+  icon,
+  iconBg,
+  iconColor,
+  title,
+  subtitle,
+  badge,
+  badgeColor,
+  onPress,
+  isLast,
+}) {
   return (
     <TouchableOpacity
       style={[styles.menuRow, isLast && styles.menuRowLast]}
@@ -185,12 +249,20 @@ function MenuRow({ icon, iconBg, iconColor, title, subtitle, badge, badgeColor, 
       </View>
 
       {badge ? (
-        <View style={[styles.menuBadge, { backgroundColor: badgeColor + "26" }]}>
-          <Text style={[styles.menuBadgeText, { color: badgeColor }]}>{badge}</Text>
+        <View
+          style={[styles.menuBadge, { backgroundColor: badgeColor + "26" }]}
+        >
+          <Text style={[styles.menuBadgeText, { color: badgeColor }]}>
+            {badge}
+          </Text>
         </View>
       ) : null}
 
-      <Ionicons name="chevron-forward" size={16} color="rgba(255,255,255,0.2)" />
+      <Ionicons
+        name="chevron-forward"
+        size={16}
+        color="rgba(255,255,255,0.2)"
+      />
     </TouchableOpacity>
   );
 }
