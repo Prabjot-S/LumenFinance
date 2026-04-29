@@ -6,6 +6,7 @@ import {
   Easing,
   Image,
   KeyboardAvoidingView,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -145,7 +146,7 @@ export default function Signup() {
   return (
     <KeyboardAvoidingView
       style={s.root}
-      behavior="padding"
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
       keyboardVerticalOffset={10}
     >
       {/* Full-width sky background */}
@@ -170,7 +171,13 @@ export default function Signup() {
 
       {/* Form panel — left/right/bottom anchored so it fills the screen width exactly */}
       <Animated.View style={[s.panel, { opacity: formOp, transform: [{ translateY: formY }] }]}>
-        <ScrollView contentContainerStyle={s.scrollContent} keyboardShouldPersistTaps="handled">
+        <ScrollView
+          contentContainerStyle={s.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+          automaticallyAdjustKeyboardInsets
+          showsVerticalScrollIndicator={false}
+        >
           <Text style={s.heading}>Create Account</Text>
           <Text style={s.subheading}>Join Lumen today</Text>
 

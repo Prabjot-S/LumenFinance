@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useState } from "react";
 import {
   Alert,
   FlatList,
@@ -90,6 +90,17 @@ const getSignedTransactionAmount = (type, amount) => {
   return type === "income" ? numericAmount : -numericAmount;
 };
 
+const alertNegativeNetWorth = () =>
+  Alert.alert("Invalid transaction", "This would make your net worth negative.");
+
+const confirmBudgetOver = (willGoOver, onContinue) => {
+  if (!willGoOver) return onContinue();
+  Alert.alert("Budget warning", "This transaction will put you over budget.", [
+    { text: "Cancel", style: "cancel" },
+    { text: "Continue", onPress: onContinue },
+  ]);
+};
+
 export default function Home() {
   //make numbers have commas
   const formatCurrency = (value) => {
@@ -143,6 +154,7 @@ export default function Home() {
   const [transactionAmount, setTransactionAmount] = useState("");
   const [selectedCategoryId, setSelectedCategoryId] = useState(null);
   const [transactionDateValue, setTransactionDateValue] = useState(new Date());
+  const [countTowardBudget, setCountTowardBudget] = useState(true);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [categories, setCategories] = useState([]);
   const [recentTransactions, setRecentTransactions] = useState([]);
@@ -153,14 +165,19 @@ export default function Home() {
   const [monthlyTotals, setMonthlyTotals] = useState({
     income: 0,
     expense: 0,
+    budgetExpense: 0,
     saved: 0,
   });
 
   const [editingTransactionId, setEditingTransactionId] = useState(null); //edit transactions
 
-  useEffect(() => {
-    fetchHomeInfo();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      fetchHomeInfo();
+      // fetchHomeInfo should run fresh whenever this tab is focused.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []),
+  );
 
   async function fetchHomeInfo() {
     // Step 1: ask Supabase who is currently logged in
@@ -239,7 +256,7 @@ export default function Home() {
     const { data: monthlyTransactionData, error: monthlyTransactionError } =
       await supabase
         .from("transactions")
-        .select("amount, transaction_type, transaction_date")
+        .select("amount, transaction_type, transaction_date, exclude_from_budget")
         .eq("user_id", user.id)
         .gte("transaction_date", toSqlDate(startOfMonth))
         .lt("transaction_date", toSqlDate(startOfNextMonth));
@@ -258,9 +275,17 @@ export default function Home() {
         .filter((tx) => tx.transaction_type === "expense")
         .reduce((sum, tx) => sum + Number(tx.amount), 0);
 
+      const budgetExpenseTotal = (monthlyTransactionData || [])
+        .filter(
+          (tx) =>
+            tx.transaction_type === "expense" && !tx.exclude_from_budget,
+        )
+        .reduce((sum, tx) => sum + Number(tx.amount), 0);
+
       setMonthlyTotals({
         income: incomeTotal,
         expense: expenseTotal,
+        budgetExpense: budgetExpenseTotal,
         saved: incomeTotal - expenseTotal,
       });
     }
@@ -272,6 +297,8 @@ export default function Home() {
         `
         id,
         category_id,
+        recurring_transaction_id,
+        exclude_from_budget,
         amount,
         transaction_type,
         transaction_name,
@@ -310,6 +337,8 @@ export default function Home() {
           rawName: tx.transaction_name || "",
           rawDate: tx.transaction_date,
           rawCategoryId: tx.category_id,
+          isRecurring: Boolean(tx.recurring_transaction_id),
+          excludesBudget: Boolean(tx.exclude_from_budget),
         };
       });
 
@@ -318,7 +347,7 @@ export default function Home() {
   }
 
   //BUDGET CARD HANDLE
-  const spentThisMonth = monthlyTotals.expense;
+  const spentThisMonth = monthlyTotals.budgetExpense;
 
   const remainingBudget =
     monthlyBudget !== null ? Math.max(monthlyBudget - spentThisMonth, 0) : null;
@@ -327,6 +356,12 @@ export default function Home() {
     monthlyBudget && monthlyBudget > 0
       ? Math.min((spentThisMonth / monthlyBudget) * 100, 100)
       : 0;
+  const budgetColor =
+    budgetUsedPercent >= 100
+      ? "#FF6B6B"
+      : budgetUsedPercent >= 80
+        ? "#F59E0B"
+        : "#F4C542";
 
   //for total in, out, saved
   const savedAmount = monthlyTotals.saved;
@@ -357,6 +392,7 @@ export default function Home() {
     setTransactionAmount("");
     setSelectedCategoryId(null);
     setTransactionDateValue(new Date());
+    setCountTowardBudget(true);
     setShowDatePicker(false);
     setShowAddTransactionModal(true);
   };
@@ -402,12 +438,14 @@ export default function Home() {
     setEditingTransactionOriginal({
       amount: transaction.rawAmount,
       type: transaction.rawType,
+      excludesBudget: transaction.excludesBudget,
     });
     setTransactionType(transaction.rawType);
     setTransactionName(transaction.rawName);
     setTransactionAmount(String(transaction.rawAmount));
     setSelectedCategoryId(transaction.rawCategoryId);
     setTransactionDateValue(new Date(`${transaction.rawDate}T00:00:00`));
+    setCountTowardBudget(!transaction.excludesBudget);
     setShowDatePicker(false);
     setShowAddTransactionModal(true);
   };
@@ -441,6 +479,16 @@ export default function Home() {
       return;
     }
 
+    const willGoOver =
+      transactionType === "expense" &&
+      countTowardBudget &&
+      monthlyBudget &&
+      spentThisMonth + parsedAmount > monthlyBudget;
+
+    confirmBudgetOver(willGoOver, () => saveTransaction(parsedAmount));
+  };
+
+  const saveTransaction = async (parsedAmount) => {
     setAddTransactionLoading(true);
 
     try {
@@ -456,6 +504,11 @@ export default function Home() {
         Number(netWorth || 0) +
         getSignedTransactionAmount(transactionType, parsedAmount);
 
+      if (nextNetWorth < 0) {
+        alertNegativeNetWorth();
+        return;
+      }
+
       const { error: insertError } = await supabase
         .from("transactions")
         .insert({
@@ -465,6 +518,7 @@ export default function Home() {
           transaction_type: transactionType,
           transaction_name: transactionName.trim(),
           transaction_date: toSqlDate(transactionDateValue),
+          exclude_from_budget: !countTowardBudget,
         });
 
       if (insertError) throw insertError;
@@ -508,6 +562,21 @@ export default function Home() {
 
     if (!editingTransactionId) return;
 
+    const previousBudgetAmount =
+      editingTransactionOriginal?.type === "expense" &&
+      !editingTransactionOriginal?.excludesBudget
+        ? Number(editingTransactionOriginal.amount)
+        : 0;
+    const nextBudgetAmount =
+      transactionType === "expense" && countTowardBudget ? parsedAmount : 0;
+    const willGoOver =
+      monthlyBudget &&
+      spentThisMonth - previousBudgetAmount + nextBudgetAmount > monthlyBudget;
+
+    confirmBudgetOver(willGoOver, () => updateTransaction(parsedAmount));
+  };
+
+  const updateTransaction = async (parsedAmount) => {
     setAddTransactionLoading(true);
 
     try {
@@ -534,6 +603,11 @@ export default function Home() {
       const nextNetWorth =
         Number(netWorth || 0) + (nextSignedAmount - previousSignedAmount);
 
+      if (nextNetWorth < 0) {
+        alertNegativeNetWorth();
+        return;
+      }
+
       const { error: updateError } = await supabase
         .from("transactions")
         .update({
@@ -542,6 +616,7 @@ export default function Home() {
           transaction_type: transactionType,
           transaction_name: transactionName.trim(),
           transaction_date: toSqlDate(transactionDateValue),
+          exclude_from_budget: !countTowardBudget,
         })
         .eq("id", editingTransactionId);
 
@@ -595,6 +670,11 @@ export default function Home() {
 
               const nextNetWorth =
                 Number(netWorth || 0) - signedAmountToRemove;
+
+              if (nextNetWorth < 0) {
+                alertNegativeNetWorth();
+                return;
+              }
 
               const { error: deleteError } = await supabase
                 .from("transactions")
@@ -686,7 +766,7 @@ export default function Home() {
       {/* —— Header —— */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.greeting}>Good morning,</Text>
+          <Text style={styles.greeting}>Hello,</Text>
           <Text style={styles.name}>{fullName || "Loading..."}</Text>
         </View>
         <TouchableOpacity
@@ -725,7 +805,16 @@ export default function Home() {
         {summaryCards.map((card) => (
           <View key={card.label} style={styles.summaryCard}>
             <Text style={styles.summaryLabel}>{card.label}</Text>
-            <Text style={[styles.summaryValue, { color: card.color }]}>
+            <Text
+              style={[
+                styles.summaryValue,
+                card.label === "Saved" && styles.summaryValueSaved,
+                { color: card.color },
+              ]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.72}
+            >
               {card.value}
             </Text>
             <Text style={styles.summaryCaption}>this month</Text>
@@ -734,10 +823,15 @@ export default function Home() {
       </View>
 
       {/* —— Budget Bar —— */}
-      <View style={styles.budgetCard}>
+      <View
+        style={[
+          styles.budgetCard,
+          budgetUsedPercent >= 100 && styles.budgetCardDanger,
+        ]}
+      >
         <View style={styles.budgetHeader}>
           <Text style={styles.sectionLabel}>Monthly budget</Text>
-          <Text style={styles.budgetPercent}>
+          <Text style={[styles.budgetPercent, { color: budgetColor }]}>
             {monthlyBudget !== null
               ? `${Math.round(budgetUsedPercent)}% used`
               : "Loading..."}
@@ -745,7 +839,10 @@ export default function Home() {
         </View>
         <View style={styles.progressTrack}>
           <View
-            style={[styles.progressFill, { width: `${budgetUsedPercent}%` }]}
+            style={[
+              styles.progressFill,
+              { width: `${budgetUsedPercent}%`, backgroundColor: budgetColor },
+            ]}
           />
         </View>
         <View style={styles.budgetFooter}>
@@ -1068,6 +1165,31 @@ export default function Home() {
                   })}
                 </View>
               </View>
+
+              <TouchableOpacity
+                style={styles.budgetToggleRow}
+                activeOpacity={0.75}
+                onPress={() => setCountTowardBudget((prev) => !prev)}
+              >
+                <View
+                  style={[
+                    styles.budgetToggleIcon,
+                    countTowardBudget && styles.budgetToggleIconActive,
+                  ]}
+                >
+                  {countTowardBudget ? (
+                    <Ionicons name="checkmark" size={14} color="#FFFFFF" />
+                  ) : null}
+                </View>
+                <View style={styles.budgetToggleTextWrap}>
+                  <Text style={styles.budgetToggleTitle}>
+                    Count toward budget
+                  </Text>
+                  <Text style={styles.budgetToggleSubtitle}>
+                    Turn off for transfers or one-time exceptions.
+                  </Text>
+                </View>
+              </TouchableOpacity>
             </ScrollView>
 
             <View style={styles.sheetButtonRow}>
@@ -1138,6 +1260,18 @@ function TransactionRow({ transaction, onPress }) {
         <Text style={styles.transactionSubtitle}>
           {transaction.category} · {transaction.date}
         </Text>
+        {transaction.isRecurring ? (
+          <View style={styles.recurringBadge}>
+            <Ionicons name="repeat-outline" size={11} color="#8E6CFF" />
+            <Text style={styles.recurringBadgeText}>Recurring</Text>
+          </View>
+        ) : null}
+        {transaction.excludesBudget ? (
+          <View style={styles.noBudgetBadge}>
+            <Ionicons name="wallet-outline" size={11} color="#F4C542" />
+            <Text style={styles.noBudgetBadgeText}>Not budgeted</Text>
+          </View>
+        ) : null}
       </View>
       <Text
         style={[
@@ -1259,6 +1393,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
   },
+  summaryValueSaved: {
+    fontSize: 15,
+  },
   summaryCaption: {
     color: "#6F707C",
     fontSize: 11,
@@ -1273,6 +1410,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     marginBottom: 16,
     padding: 14,
+  },
+  budgetCardDanger: {
+    borderColor: "rgba(255,107,107,0.65)",
   },
   budgetHeader: {
     flexDirection: "row",
@@ -1365,6 +1505,38 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 3,
   },
+  recurringBadge: {
+    alignItems: "center",
+    alignSelf: "flex-start",
+    backgroundColor: "rgba(108,99,255,0.12)",
+    borderRadius: 999,
+    flexDirection: "row",
+    gap: 4,
+    marginTop: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  recurringBadgeText: {
+    color: "#8E6CFF",
+    fontSize: 10,
+    fontWeight: "600",
+  },
+  noBudgetBadge: {
+    alignItems: "center",
+    alignSelf: "flex-start",
+    backgroundColor: "rgba(244,197,66,0.12)",
+    borderRadius: 999,
+    flexDirection: "row",
+    gap: 4,
+    marginTop: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  noBudgetBadgeText: {
+    color: "#F4C542",
+    fontSize: 10,
+    fontWeight: "600",
+  },
   transactionAmount: {
     color: "#FFFFFF",
     fontSize: 14,
@@ -1380,34 +1552,33 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   quickAddBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: "flex-end",
-    alignItems: "flex-end",
-    paddingRight: 20,
-    paddingBottom: 84,
-    backgroundColor: "rgba(3,4,10,0.18)",
-  },
+  ...StyleSheet.absoluteFillObject,
+  justifyContent: "flex-end",
+  alignItems: "center",
+  paddingBottom: 92,
+  backgroundColor: "rgba(3,4,10,0.22)",
+},
   quickAddMenu: {
-    gap: 12,
-    alignItems: "flex-end",
+    gap: 10,
+    alignItems: "center",
   },
   quickAddItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    backgroundColor: "rgba(18,19,27,0.98)",
-    borderWidth: 1,
-    borderColor: "#2B2E3B",
-    borderRadius: 18,
-    paddingVertical: 10,
-    paddingLeft: 12,
-    paddingRight: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.22,
-    shadowRadius: 18,
-    elevation: 8,
-  },
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 10,
+  backgroundColor: "#12131B",
+  borderWidth: 1,
+  borderColor: "#2B2E3B",
+  borderRadius: 999,
+  paddingVertical: 10,
+  paddingLeft: 12,
+  paddingRight: 18,
+  shadowColor: "#000",
+  shadowOffset: { width: 0, height: 8 },
+  shadowOpacity: 0.25,
+  shadowRadius: 14,
+  elevation: 8,
+},
   quickAddIconWrap: {
     width: 34,
     height: 34,
@@ -1533,6 +1704,43 @@ const styles = StyleSheet.create({
     color: "#D7D9E0",
     fontSize: 13,
     fontWeight: "500",
+  },
+  budgetToggleRow: {
+    alignItems: "center",
+    backgroundColor: "#0E1016",
+    borderColor: "#242633",
+    borderRadius: 14,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 18,
+    padding: 14,
+  },
+  budgetToggleIcon: {
+    alignItems: "center",
+    borderColor: "#3A3D4A",
+    borderRadius: 10,
+    borderWidth: 1,
+    height: 22,
+    justifyContent: "center",
+    width: 22,
+  },
+  budgetToggleIconActive: {
+    backgroundColor: "#6C63FF",
+    borderColor: "#6C63FF",
+  },
+  budgetToggleTextWrap: {
+    flex: 1,
+  },
+  budgetToggleTitle: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  budgetToggleSubtitle: {
+    color: "#7C7D88",
+    fontSize: 11,
+    marginTop: 3,
   },
   sheetButtonRow: {
     flexDirection: "row",

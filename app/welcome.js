@@ -14,6 +14,18 @@ import {
 import { supabase } from "../lib/supabase";
 
 const FREQUENCIES = ["Weekly", "Bi-weekly", "Monthly"];
+const RECURRING_FREQ = {
+  Weekly: "weekly",
+  "Bi-weekly": "biweekly",
+  Monthly: "monthly",
+};
+
+const toSqlDate = (date) => {
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, "0");
+  const day = `${date.getDate()}`.padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
 
 export default function WelcomeSetup() {
   const router = useRouter();
@@ -80,6 +92,29 @@ export default function WelcomeSetup() {
 
       if (updateError) throw updateError;
 
+      const { data: salaryCategory } = await supabase
+        .from("categories")
+        .select("id")
+        .eq("name", "Salary")
+        .single();
+      if (salaryCategory) {
+        const today = toSqlDate(new Date());
+        const { error: recurringError } = await supabase
+          .from("recurring_transactions")
+          .insert({
+            user_id: user.id,
+            category_id: salaryCategory.id,
+            name: "Paycheck",
+            amount: parsedIncome,
+            transaction_type: "income",
+            frequency: RECURRING_FREQ[incomeFreq],
+            start_date: today,
+            next_due_date: today,
+            is_active: true,
+          });
+        if (recurringError) throw recurringError;
+      }
+
       router.replace("/loading");
     } catch (err) {
       if (err.message?.includes("User from sub claim in JWT does not exist")) {
@@ -106,7 +141,7 @@ export default function WelcomeSetup() {
       >
         <View style={styles.header}>
           <Text style={styles.logo}>lumen</Text>
-          <Text style={styles.title}>Let's set up your finances</Text>
+          <Text style={styles.title}>Let&apos;s set up your finances</Text>
           <Text style={styles.subtitle}>
             This helps us personalize your dashboard.
           </Text>

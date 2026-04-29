@@ -7,6 +7,7 @@ import {
   Image,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -182,8 +183,13 @@ export default function Login() {
   return (
     <KeyboardAvoidingView
       style={s.root}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
+      <ScrollView
+        contentContainerStyle={s.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
       {/* Full-width dark sky gradient via nested Views */}
       <View style={[s.skyBg, { width }]} />
 
@@ -275,6 +281,7 @@ export default function Login() {
           <Text style={s.linkPurple}>Sign Up</Text>
         </TouchableOpacity>
       </Animated.View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
@@ -285,6 +292,10 @@ const s = StyleSheet.create({
     backgroundColor: "#07070f",
     // ensures the root fills the full device width on all screens
     alignSelf: "stretch",
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 120,
   },
   // full-bleed sky: radial-ish dark purple at top fading to near-black
   skyBg: {

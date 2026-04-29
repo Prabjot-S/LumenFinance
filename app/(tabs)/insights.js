@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -16,6 +17,40 @@ export default function Insights() {
   const [insight, setInsight] = useState(null);
   const [monthlySummary, setMonthlySummary] = useState(null);
   const [aiError, setAiError] = useState(false);
+
+  const fetchMonthlySummary = useCallback(async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    const now = new Date();
+    const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const previousMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const previousMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+
+    const { data: currentMonthData } = await supabase
+      .from("transactions")
+      .select("amount, transaction_type")
+      .eq("user_id", session.user.id)
+      .gte("transaction_date", currentMonthStart.toISOString().split('T')[0]);
+
+    const { data: previousMonthData } = await supabase
+      .from("transactions")
+      .select("amount, transaction_type")
+      .eq("user_id", session.user.id)
+      .gte("transaction_date", previousMonthStart.toISOString().split('T')[0])
+      .lte("transaction_date", previousMonthEnd.toISOString().split('T')[0]);
+
+    const totals = (rows = []) => {
+      const income = rows.filter(t => t.transaction_type === "income").reduce((s, t) => s + Number(t.amount), 0);
+      const expenses = rows.filter(t => t.transaction_type === "expense").reduce((s, t) => s + Number(t.amount), 0);
+      return { income, expenses, savings: income - expenses, savingsRate: income > 0 ? ((income - expenses) / income) * 100 : 0 };
+    };
+
+    setMonthlySummary({
+      current: { name: now.toLocaleString('default', { month: 'long' }), ...totals(currentMonthData) },
+      previous: { name: previousMonthStart.toLocaleString('default', { month: 'long' }), ...totals(previousMonthData) },
+    });
+  }, []);
 
   const fetchInsight = useCallback(async () => {
     try {
@@ -106,6 +141,12 @@ export default function Insights() {
   useEffect(() => {
     fetchInsight();
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchMonthlySummary();
+    }, [fetchMonthlySummary]),
+  );
 
   const onRefresh = () => {
     setRefreshing(true);
