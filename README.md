@@ -2,6 +2,16 @@
 ![Expo](https://img.shields.io/badge/Expo-SDK%2054-blue)
 ![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-green)
 
+![React Native](https://img.shields.io/badge/React_Native-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+![Expo](https://img.shields.io/badge/Expo-1B1F23?style=for-the-badge&logo=expo&logoColor=white)
+![Supabase](https://img.shields.io/badge/Supabase-3FCF8E?style=for-the-badge&logo=supabase&logoColor=white)
+![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)
+![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)
+![Tailwind](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
+![Git](https://img.shields.io/badge/Git-F05032?style=for-the-badge&logo=git&logoColor=white)
+
+[![Header](https://capsule-render.vercel.app/api?type=waving&color=0:6C63FF,100:A78BFA&height=300&text=Lumen%20Finance&desc=Personal%20Finance%20Management&fontColor=fff&animation=fadeIn)
+](https://capsule-render.vercel.app/api?type=waving&color=0:6C63FF,100:A78BFA&height=220&text=Lumen%20Finance&desc=Personal%20Finance%20Management&fontColor=fff&animation=fadeIn&descSize=18&descAlignY=70&textAlignY=35)
 # Lumen Finance
 
 A full-stack personal finance management mobile application built with React Native and Expo. Lumen helps users track expenses, manage budgets, visualize spending trends, set savings goals, automate recurring transactions, and receive AI-powered financial insights.
