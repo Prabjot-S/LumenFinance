@@ -27,7 +27,7 @@ A full-stack personal finance management mobile application built with React Nat
 - Current Version: 1.0.0
 - Build Date: May 2026
 - Minimum iOS: 14.0
-- Minimum Android: 10.0 (API 29)
+- Minimum Android: 10.0 [API 29]
 
 ## Tech Stack
 
