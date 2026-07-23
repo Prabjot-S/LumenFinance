@@ -298,8 +298,3 @@ The Groq API key is stored as a Supabase secret and never exposed to the client.
     <td></td>
   </tr>
 </table>
-
-
-## License
-
-Private repository - all rights reserved. For educational purposes only.
